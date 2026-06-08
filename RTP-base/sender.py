@@ -6,7 +6,7 @@ import time
 
 from utils import PacketHeader, compute_checksum
 
-# Packet types theo spec
+# Packet types
 TYPE_START = 0
 TYPE_END   = 1
 TYPE_DATA  = 2
@@ -41,9 +41,9 @@ def sender(receiver_ip, receiver_port, window_size):
     s.setblocking(False)
     dest = (receiver_ip, receiver_port)
 
-    TIMEOUT = 0.5   # 500ms theo spec
+    TIMEOUT = 0.5  
 
-    # ---------- STATE: START ----------
+    # start
     start_pkt = make_packet(TYPE_START, seq_num=0)
     s.sendto(start_pkt, dest)
     deadline = time.time() + TIMEOUT
@@ -64,7 +64,7 @@ def sender(receiver_ip, receiver_port, window_size):
         if parsed and parsed[0] == TYPE_ACK and parsed[1] == 1:
             break   # START ACK nhận được (seq_num=1 theo spec)
 
-    # ---------- STATE: DATA ----------
+    # data 
     # Đọc hết stdin thành chunks
     chunks = []
     while True:
@@ -98,7 +98,7 @@ def sender(receiver_ip, receiver_port, window_size):
     while base <= total:
         # Kiểm tra timeout 500ms: nếu window không tiến thêm
         if timer_start and time.time() - timer_start >= TIMEOUT:
-            # Retransmit tất cả gói trong window (Go-Back-N style theo spec base)
+            # Retransmit tất cả gói trong window (Go-Back-N)
             for seq in range(base, next_send):
                 send_pkt(seq)
             timer_start = time.time()
@@ -118,7 +118,7 @@ def sender(receiver_ip, receiver_port, window_size):
             continue
 
         ack_seq = parsed[1]
-        if ack_seq > base:
+        if ack_seq > base: # vdu nhận gói 2, base lên 2, next_send lên 6 vs window size 4
             base = ack_seq          # cumulative ACK
             timer_start = time.time()   # reset timer khi window tiến
             # Gửi thêm gói mới vào window
@@ -126,7 +126,7 @@ def sender(receiver_ip, receiver_port, window_size):
                 send_pkt(next_send)
                 next_send += 1
 
-    # ---------- STATE: END ----------
+    # end
     end_seq = total + 1   # seq_num của END = next sau DATA cuối
     end_pkt = make_packet(TYPE_END, seq_num=end_seq)
     s.sendto(end_pkt, dest)
@@ -135,7 +135,7 @@ def sender(receiver_ip, receiver_port, window_size):
     while True:
         now = time.time()
         if now >= deadline:
-            break   # 500ms trôi qua, thoát dù chưa nhận ACK (theo spec)
+            break  # đã quá deadline mà chưa nhận được ACK của END, kết thúc luôn
         ready = select.select([s], [], [], max(0, deadline - now))
         if not ready[0]:
             break

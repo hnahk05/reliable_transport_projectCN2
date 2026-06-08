@@ -39,16 +39,18 @@ def sender(receiver_ip, receiver_port, window_size):
     dest = (receiver_ip, receiver_port)
     TIMEOUT = 0.5
 
-    # ---------- START ----------
+    # start
     start_pkt = make_packet(TYPE_START, seq_num=0)
     s.sendto(start_pkt, dest)
     deadline = time.time() + TIMEOUT
 
     while True:
         now = time.time()
+        # đã quá deadline, gửi lại START
         if now >= deadline:
             s.sendto(start_pkt, dest)
             deadline = now + TIMEOUT
+        # chờ xem socket có dữ liệu đến ko, ko thì quay lại
         ready = select.select([s], [], [], max(0, deadline - time.time()))
         if not ready[0]:
             continue
@@ -60,14 +62,15 @@ def sender(receiver_ip, receiver_port, window_size):
         if parsed and parsed[0] == TYPE_ACK and parsed[1] == 1:
             break
 
-    # ---------- DATA ----------
+    # data
     chunks = []
     while True:
+        # đọc stdin thành các chunk nhỏ <= MAX_PAYLOAD
         chunk = sys.stdin.buffer.read(MAX_PAYLOAD)
         if not chunk:
             break
         chunks.append(chunk)
-
+ 
     total = len(chunks)
     # window: {seq_num: {"sent_time": float, "acked": bool}}
     window = {}
@@ -76,8 +79,10 @@ def sender(receiver_ip, receiver_port, window_size):
     timer_start = time.time()
 
     def send_pkt(seq):
+        # chunks bdau từ ind 0 nhưng seq_num bdau từ 1, nên chunks[seq-1]
         pkt = make_packet(TYPE_DATA, seq_num=seq, payload=chunks[seq - 1])
         s.sendto(pkt, dest)
+        # nếu seq đã trong window thì cập nhật lại sent_time, nếu chưa thì thêm vào window
         if seq in window:
             window[seq]["sent_time"] = time.time()
         else:
@@ -95,7 +100,7 @@ def sender(receiver_ip, receiver_port, window_size):
                 if not entry["acked"]:
                     send_pkt(seq)
             timer_start = time.time()
-
+        # chờ xem ack mới đến ko, nếu ko thì quay lại kiểm tra timeout
         ready = select.select([s], [], [], 0.05)
         if not ready[0]:
             continue
@@ -106,6 +111,7 @@ def sender(receiver_ip, receiver_port, window_size):
             continue
 
         parsed = parse_packet(raw)
+        # bỏ qua checksum lỗi hoặc gói không phải ACK
         if not parsed or parsed[0] != TYPE_ACK:
             continue
 
@@ -128,7 +134,7 @@ def sender(receiver_ip, receiver_port, window_size):
                 send_pkt(next_send)
                 next_send += 1
 
-    # ---------- END ----------
+    # end
     end_seq = total + 1
     end_pkt = make_packet(TYPE_END, seq_num=end_seq)
     s.sendto(end_pkt, dest)

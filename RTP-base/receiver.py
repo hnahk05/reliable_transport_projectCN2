@@ -35,7 +35,7 @@ def receiver(receiver_ip, receiver_port, window_size):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind((receiver_ip, receiver_port))
 
-    # ---------- STATE: START ----------
+    # start
     while True:
         raw, sender_addr = s.recvfrom(2048)
         parsed = parse_packet(raw)
@@ -44,7 +44,7 @@ def receiver(receiver_ip, receiver_port, window_size):
             s.sendto(make_ack(seq_num=1), sender_addr)
             break
 
-    # ---------- STATE: DATA ----------
+    # data
     # next_expected bắt đầu từ 1 (DATA seq bắt đầu từ 1)
     next_expected = 1
     buffer = {}         # {seq_num: payload} — lưu gói lệch thứ tự
@@ -55,7 +55,7 @@ def receiver(receiver_ip, receiver_port, window_size):
         parsed = parse_packet(raw)
 
         if parsed is None:
-            # Checksum sai, bỏ qua, KHÔNG gửi ACK
+            # Checksum sai, bỏ qua, k gửi ACK
             continue
 
         pkt_type, seq_num, payload = parsed
@@ -84,7 +84,6 @@ def receiver(receiver_ip, receiver_port, window_size):
         # Gửi cumulative ACK (next_expected là seq tiếp theo mong chờ)
         s.sendto(make_ack(seq_num=next_expected), sender_addr)
 
-    # ---------- OUTPUT ----------
     # Ghi data theo thứ tự seq_num
     for seq in sorted(received_data.keys()):
         sys.stdout.buffer.write(received_data[seq])
