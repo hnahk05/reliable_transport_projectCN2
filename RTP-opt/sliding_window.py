@@ -1,18 +1,3 @@
-"""
-sliding_window.py — RTP-opt  (Selective Repeat)
-=================================================
-Thuật toán: Selective Repeat (SR)
-  - Bên GỬI: chỉ gửi lại ĐÚNG gói bị mất (không gửi lại cả cửa sổ).
-    Mỗi gói có timer riêng.
-  - Bên NHẬN: buffer gói lệch thứ tự, chấp nhận bất kỳ gói nào trong window.
-    Gửi ACK riêng cho từng gói (individual ACK).
-
-Ưu điểm so với Go-Back-N:
-  - Tiết kiệm băng thông khi mạng hay mất gói.
-  - Hiệu quả hơn với window lớn và RTT cao.
-
-API hoàn toàn giống RTP-base (Người A không cần đổi code).
-"""
 
 import time
 from collections import OrderedDict

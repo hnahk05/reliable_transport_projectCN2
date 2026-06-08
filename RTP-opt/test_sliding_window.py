@@ -1,11 +1,3 @@
-"""
-test_sliding_window.py — RTP-opt  (Selective Repeat)
-======================================================
-Unit Test cho SlidingWindow Selective Repeat và ReliableProtocol.
-Chạy: python test_sliding_window.py   hoặc   python -m pytest test_sliding_window.py -v
-
-KHÔNG cần mạng. Dùng gói tin giả (bytes/dict) để test thuật toán.
-"""
 
 import time
 import unittest

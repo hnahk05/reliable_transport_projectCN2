@@ -1,18 +1,3 @@
-"""
-sliding_window.py — RTP-base  (Go-Back-N)
-==========================================
-Thuật toán: Go-Back-N
-  - Bên GỬI: duy trì một cửa sổ [base, base+window_size).
-    Khi timeout, gửi lại TẤT CẢ các gói chưa ACK từ base trở đi.
-  - Bên NHẬN: chỉ chấp nhận đúng thứ tự, từ chối (discard) gói lệch thứ tự.
-
-API bắt buộc (Người A gọi):
-    logic = ReliableProtocol(window_size=10, timeout_seconds=2.0)
-    logic.queue_data(data_chunk: bytes)
-    logic.get_packets_to_send() -> list[bytes]
-    logic.receive_packet(raw_packet: bytes) -> bytes | None
-    logic.get_ready_data() -> bytes
-"""
 
 import time
 from packet import (

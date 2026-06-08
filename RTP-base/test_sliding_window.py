@@ -1,12 +1,4 @@
-"""
-test_sliding_window.py — RTP-base
-===================================
-Unit Test cho SlidingWindow (Go-Back-N) và ReliableProtocol.
-Chạy: python test_sliding_window.py   hoặc   python -m pytest test_sliding_window.py -v
 
-KHÔNG cần mạng, KHÔNG cần socket.
-Dùng "gói tin giả" (dict/bytes) để kiểm tra thuật toán.
-"""
 
 import time
 import unittest
