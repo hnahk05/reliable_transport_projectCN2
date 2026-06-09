@@ -6,14 +6,13 @@ import time
 
 from utils import PacketHeader, compute_checksum
 
-# Packet types
 TYPE_START = 0
 TYPE_END   = 1
 TYPE_DATA  = 2
 TYPE_ACK   = 3
 
-HEADER_SIZE = 16      # 4 x IntField
-MAX_PAYLOAD = 1472 - HEADER_SIZE  # = 1456 bytes
+HEADER_SIZE = 16 
+MAX_PAYLOAD = 1472 - HEADER_SIZE 
 
 
 def make_packet(pkt_type: int, seq_num: int, payload: bytes = b"") -> bytes:
@@ -43,7 +42,7 @@ def sender(receiver_ip, receiver_port, window_size):
 
     TIMEOUT = 0.5  
 
-    # start
+    # ---------- STATE: START ----------
     start_pkt = make_packet(TYPE_START, seq_num=0)
     s.sendto(start_pkt, dest)
     deadline = time.time() + TIMEOUT
@@ -62,10 +61,9 @@ def sender(receiver_ip, receiver_port, window_size):
             continue
         parsed = parse_packet(raw)
         if parsed and parsed[0] == TYPE_ACK and parsed[1] == 1:
-            break   # START ACK nhận được (seq_num=1 theo spec)
+            break   
 
-    # data 
-    # Đọc hết stdin thành chunks
+    # ---------- STATE: DATA ----------
     chunks = []
     while True:
         chunk = sys.stdin.buffer.read(MAX_PAYLOAD)
@@ -73,12 +71,10 @@ def sender(receiver_ip, receiver_port, window_size):
             break
         chunks.append(chunk)
 
-    # seq_num của DATA bắt đầu từ 1
     total = len(chunks)
-    base = 1            # seq_num nhỏ nhất chưa ACK
-    next_send = 1       # seq_num tiếp theo sẽ gửi
-    sent_time = {}      # seq_num -> thời điểm gửi gần nhất
-    timer_start = None  # thời điểm bắt đầu đếm 500ms
+    base = 1 
+    next_send = 1 
+    timer_start = None 
 
     def chunk_of(seq):
         return chunks[seq - 1]
@@ -86,19 +82,19 @@ def sender(receiver_ip, receiver_port, window_size):
     def send_pkt(seq):
         pkt = make_packet(TYPE_DATA, seq_num=seq, payload=chunk_of(seq))
         s.sendto(pkt, dest)
-        sent_time[seq] = time.time()
 
-    # Gửi window đầu tiên
-    while next_send <= min(base + window_size - 1, total):
-        send_pkt(next_send)
-        next_send += 1
+    def fill_window():
+        nonlocal next_send
+        while next_send <= total and next_send < base + window_size:
+            send_pkt(next_send)
+            next_send += 1
+
+    fill_window()
     if base <= total:
         timer_start = time.time()
 
     while base <= total:
-        # Kiểm tra timeout 500ms: nếu window không tiến thêm
         if timer_start and time.time() - timer_start >= TIMEOUT:
-            # Retransmit tất cả gói trong window (Go-Back-N)
             for seq in range(base, next_send):
                 send_pkt(seq)
             timer_start = time.time()
@@ -118,16 +114,13 @@ def sender(receiver_ip, receiver_port, window_size):
             continue
 
         ack_seq = parsed[1]
-        if ack_seq > base: # vdu nhận gói 2, base lên 2, next_send lên 6 vs window size 4
-            base = ack_seq          # cumulative ACK
-            timer_start = time.time()   # reset timer khi window tiến
-            # Gửi thêm gói mới vào window
-            while next_send <= min(base + window_size - 1, total):
-                send_pkt(next_send)
-                next_send += 1
+        if base < ack_seq <= total + 1:
+            base = ack_seq 
+            fill_window()
+            timer_start = time.time() if base <= total else None
 
-    # end
-    end_seq = total + 1   # seq_num của END = next sau DATA cuối
+    # ---------- STATE: END ----------
+    end_seq = total + 1
     end_pkt = make_packet(TYPE_END, seq_num=end_seq)
     s.sendto(end_pkt, dest)
     deadline = time.time() + TIMEOUT
@@ -135,7 +128,7 @@ def sender(receiver_ip, receiver_port, window_size):
     while True:
         now = time.time()
         if now >= deadline:
-            break  # đã quá deadline mà chưa nhận được ACK của END, kết thúc luôn
+            break
         ready = select.select([s], [], [], max(0, deadline - now))
         if not ready[0]:
             break

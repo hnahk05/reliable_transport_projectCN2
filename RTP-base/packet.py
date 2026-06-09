@@ -1,18 +1,4 @@
-"""
-packet.py — RTP-base
-Chịu trách nhiệm: đóng gói (build) và giải gói (parse) packet theo đúng contract.
-
-Header format (12 bytes): !IIBBH
-  - Sequence Number : 4 bytes (unsigned int)
-  - ACK Number      : 4 bytes (unsigned int)
-  - Flags           : 1 byte  (unsigned char)  SYN=0x04, FIN=0x02, ACK=0x01
-  - Padding         : 1 byte  (unsigned char)  luôn = 0
-  - Checksum        : 2 bytes (unsigned short)
-  - Payload         : tối đa 1388 bytes
-"""
-
 import struct
-
 HEADER_FORMAT  = "!IIBBH"
 HEADER_SIZE    = struct.calcsize(HEADER_FORMAT)
 MAX_PAYLOAD    = 1400 - HEADER_SIZE
@@ -42,18 +28,7 @@ def build_packet(seq_num: int,
                  ack_num: int,
                  flags: int,
                  payload: bytes = b"") -> bytes:
-    """
-    Đóng gói một packet hoàn chỉnh (header + payload).
-
-    Args:
-        seq_num : Sequence number của gói này.
-        ack_num : ACK number (bên nhận điền vào; bên gửi data để = 0).
-        flags   : Tổ hợp FLAG_SYN | FLAG_FIN | FLAG_ACK hoặc 0.
-        payload : Dữ liệu thực (tối đa MAX_PAYLOAD bytes).
-
-    Returns:
-        bytes — raw packet sẵn sàng để sendto().
-    """
+    
     if len(payload) > MAX_PAYLOAD:
         raise ValueError(f"Payload vượt quá {MAX_PAYLOAD} bytes")
 
@@ -64,14 +39,7 @@ def build_packet(seq_num: int,
     header = struct.pack(HEADER_FORMAT, seq_num, ack_num, flags, 0, cksum)
     return header + payload
 
-def parse_packet(raw: bytes) -> dict | None:
-    """
-    Giải mã raw bytes thành dict các trường.
-
-    Returns:
-        dict với các key: seq_num, ack_num, flags, checksum, payload
-        None nếu packet quá ngắn hoặc checksum sai.
-    """
+def parse_packet(raw: bytes) -> dict | None: 
     if len(raw) < HEADER_SIZE:
         return None
 
